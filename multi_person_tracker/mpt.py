@@ -189,7 +189,7 @@ class MPT():
 
         image_dataset = ImageFolder(image_folder)
 
-        dataloader = DataLoader(image_dataset, batch_size=self.batch_size, num_workers=8)
+        dataloader = DataLoader(image_dataset, batch_size=self.batch_size, num_workers=0)
 
         trackers = self.run_tracker(dataloader)
         if self.display:

@@ -128,11 +128,15 @@ class MPT():
     def prepare_output_detections(self, detections):
         new_detections = []
         for frame_idx, dets in enumerate(detections):
+            img_dets = []
             for d in dets:
                 w, h = d[2] - d[0], d[3] - d[1]
                 c_x, c_y = d[0] + w / 2, d[1] + h / 2
                 w = h = np.where(w / h > 1, w, h)
                 bbox = np.array([c_x, c_y, w, h])
+                img_dets.append(bbox)
+            new_detections.append(np.array(img_dets))
+        return new_detections
 
     def prepare_output_tracks(self, trackers):
         '''
@@ -219,11 +223,11 @@ class MPT():
 
     def display_detection_results(self, image_folder, detections, output_file=None):
         '''
-        Display the output of detector
-        :param video (ndarray): input video tensor of shape NxHxWxC
-        :param detections (ndarray): detections of shape Nx4 [x1,y1,x2,y2,track_id]
-        :return: None
-        '''
+                Display the output of detector
+                :param video (ndarray): input video tensor of shape NxHxWxC
+                :param detections (ndarray): detections of shape Nx4 [x1,y1,x2,y2,track_id]
+                :return: None
+                '''
         print('Displaying results..')
 
         save = True if output_file else False
@@ -238,19 +242,20 @@ class MPT():
         ])
 
         for idx, (img_fname, dets) in enumerate(zip(image_file_names, detections)):
-
+            print(img_fname)
             img = cv2.imread(img_fname)
             for d in dets:
                 d = d.astype(np.int32)
-                c = (0,255,0)
+                c = (0, 255, 0)
                 cv2.rectangle(
                     img, (d[0], d[1]), (d[2], d[3]),
                     color=c, thickness=int(round(img.shape[0] / 256))
                 )
 
-            cv2.imshow('result video', img)
+            cv2.imshow('result image', img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
-            # time.sleep(0.03)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -295,5 +300,5 @@ class MPT():
         detections = self.run_detector(dataloader)
         if self.display:
             self.display_detection_results(image_folder, detections, output_file)
-
+        detections = self.prepare_output_detections(detections)
         return detections

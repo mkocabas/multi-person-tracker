@@ -46,7 +46,7 @@ class ImageFolder(Dataset):
         self.image_file_names = [
             osp.join(image_folder, x)
             for x in os.listdir(image_folder)
-            if x.endswith('.png') or x.endswith('.jpg')
+            if x.endswith('.png') or x.endswith('.jpg') or x.endswith('.jpeg')
         ]
         self.image_file_names = sorted(self.image_file_names)
 

@@ -123,7 +123,7 @@ class MPT():
         runtime = time.time() - start
         fps = len(dataloader.dataset) / runtime
         print(f'Finished. Detection + Tracking FPS {fps:.2f}')
-        return trackers
+        return detections
 
     def prepare_output_detections(self, detections):
         new_detections = []

@@ -1,0 +1,10 @@
+README.md
+setup.py
+multi_person_tracker/__init__.py
+multi_person_tracker/data.py
+multi_person_tracker/mpt.py
+multi_person_tracker/sort.py
+multi_person_tracker.egg-info/PKG-INFO
+multi_person_tracker.egg-info/SOURCES.txt
+multi_person_tracker.egg-info/dependency_links.txt
+multi_person_tracker.egg-info/top_level.txt

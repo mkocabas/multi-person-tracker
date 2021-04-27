@@ -7,21 +7,17 @@ import numpy as np
 import os.path as osp
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from torchvision.models.detection import keypointrcnn_resnet50_fpn
-from yolov3.yolo import YOLOv3
+from yolov5 import YOLOv5
 
 from multi_person_tracker import Sort
 from multi_person_tracker.data import ImageFolder, images_to_video
 
-class MPT():
+class MPT_WD():
     def __init__(
             self,
-            device=None,
-            batch_size=12,
-            display=False,
+            model_path = os.path.join(os.path.expanduser("~"), '.torch/models/yolov5s.pt'),
+            device='cuda',
             detection_threshold=0.7,
-            detector_type='yolo',
-            yolo_img_size=608,
             output_format='list',
     ):
         '''
@@ -41,19 +37,11 @@ class MPT():
         else:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        self.batch_size = batch_size
-        self.display = display
+        self.model_path = model_path
         self.detection_threshold = detection_threshold
+        self.detector = YOLOv5(model_path=self.model_path, device = self.device)
+        self.detector.model.classes = 0
         self.output_format = output_format
-
-        if detector_type == 'maskrcnn':
-            self.detector = keypointrcnn_resnet50_fpn(pretrained=True).to(self.device).eval()
-        elif detector_type == 'yolo':
-            self.detector = YOLOv3(
-                device=self.device, img_size=yolo_img_size, person_detector=True, video=True, return_dict=True
-            )
-        else:
-            raise ModuleNotFoundError
 
         self.tracker = Sort()
 
@@ -72,14 +60,17 @@ class MPT():
         start = time.time()
         print('Running Multi-Person-Tracker')
         trackers = []
+        count = 0
         for batch in tqdm(dataloader):
-            batch = batch.to(self.device)
+            #batch = batch.to(self.device)
+            test_im = dataloader.sampler.data_source.image_file_names[count]
+            count += 1
+            predictions = self.detector.predict(test_im) #(batch)
 
-            predictions = self.detector(batch)
-
-            for pred in predictions:
-                bb = pred['boxes'].cpu().numpy()
-                sc = pred['scores'].cpu().numpy()[..., None]
+            pred = predictions.xyxy[0]
+            if(1):
+                bb = pred[:,:4].cpu().numpy()
+                sc = pred[:,4].cpu().numpy()[..., None]
                 dets = np.hstack([bb,sc])
                 dets = dets[sc[:,0] > self.detection_threshold]
 
@@ -132,7 +123,7 @@ class MPT():
             for d in dets:
                 w, h = d[2] - d[0], d[3] - d[1]
                 c_x, c_y = d[0] + w / 2, d[1] + h / 2
-                w = h = np.where(w / h > 1, w, h)
+                #w = h = np.where(w / h > 1, w, h)
                 bbox = np.array([c_x, c_y, w, h])
                 img_dets.append(bbox)
             new_detections.append(np.array(img_dets))
@@ -153,7 +144,7 @@ class MPT():
 
                 w, h = d[2] - d[0], d[3] - d[1]
                 c_x, c_y = d[0] + w/2, d[1] + h/2
-                w = h = np.where(w / h > 1, w, h)
+                #w = h = np.where(w / h > 1, w, h)
                 bbox = np.array([c_x, c_y, w, h])
 
                 if person_id in people.keys():
@@ -269,7 +260,7 @@ class MPT():
             images_to_video(img_folder=tmp_write_folder, output_vid_file=output_file)
             shutil.rmtree(tmp_write_folder)
 
-    def __call__(self, image_folder, output_file=None):
+    def __call__(self, image_folder, batch_size, output_file=None):
         '''
         Execute MPT and return results as a dictionary of person instances
 
@@ -279,11 +270,9 @@ class MPT():
 
         image_dataset = ImageFolder(image_folder)
 
-        dataloader = DataLoader(image_dataset, batch_size=self.batch_size, num_workers=0)
+        dataloader = DataLoader(image_dataset, batch_size, num_workers=0)
 
         trackers = self.run_tracker(dataloader)
-        if self.display:
-            self.display_results(image_folder, trackers, output_file)
 
         if self.output_format == 'dict':
             result = self.prepare_output_tracks(trackers)
@@ -295,10 +284,11 @@ class MPT():
     def detect(self, image_folder, output_file=None):
         image_dataset = ImageFolder(image_folder)
 
-        dataloader = DataLoader(image_dataset, batch_size=self.batch_size, num_workers=0)
+        dataloader = DataLoader(image_dataset, batch_size, num_workers=0)
 
         detections = self.run_detector(dataloader)
         if self.display:
             self.display_detection_results(image_folder, detections, output_file)
         detections = self.prepare_output_detections(detections)
         return detections
+

@@ -153,7 +153,6 @@ class MPT():
 
                 w, h = d[2] - d[0], d[3] - d[1]
                 c_x, c_y = d[0] + w/2, d[1] + h/2
-                w = h = np.where(w / h > 1, w, h)
                 bbox = np.array([c_x, c_y, w, h])
 
                 if person_id in people.keys():
